@@ -1,8 +1,8 @@
--- =============================================
---         RITUAL HUB - BLOX FRUITS
---     Mobile-Optimized | Delta Executor
---    All Features (No PVP) | English Only
--- =============================================
+-- ============================================================
+--          RITUAL HUB 3.0 - ANTI-CHEAT EDITION
+--      Blox Fruits | Mobile + Delta | All Features (No PVP)
+--     Tween Teleports | Sea Detection | Glass UI | English
+-- ============================================================
 
 local player = game:GetService("Players").LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
@@ -12,12 +12,12 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local VirtualUser = game:GetService("VirtualUser")
 local TweenService = game:GetService("TweenService")
-local TeleportService = game:GetService("TeleportService")
 local CoreGui = game:GetService("CoreGui")
+local Lighting = game:GetService("Lighting")
 
--- =============================================
---              TOGGLES (GLOBALS)
--- =============================================
+-- ============================================================
+--                     GLOBAL TOGGLES
+-- ============================================================
 _G.Ritual = {
     Farm = false,
     Quest = false,
@@ -30,93 +30,184 @@ _G.Ritual = {
     FruitSniper = false,
     ESP = false,
     AutoStats = false,
-    Teleport = nil
 }
 
--- =============================================
---          MOBILE UI - RITUAL HUB
--- =============================================
+-- ============================================================
+--           SEA DETECTION & TWEEN HELPER
+-- ============================================================
+local function getSea()
+    local pos = rootPart.Position
+    if pos.X < 1000 and pos.Z < 3000 then return "First Sea" end
+    if pos.X > 2000 and pos.Z < 2000 then return "Second Sea" end
+    if pos.X > 3000 and pos.Z > 1000 then return "Third Sea" end
+    return "Unknown"
+end
+
+-- Safe tween to target position (prevents teleport bans)
+function tweenTo(pos, speed)
+    speed = speed or 150 -- studs per second
+    if not rootPart then return end
+    local current = rootPart.Position
+    local distance = (pos - current).magnitude
+    if distance < 5 then return end
+    local duration = distance / speed
+    local tweenInfo = TweenInfo.new(
+        duration,
+        Enum.EasingStyle.Linear,
+        Enum.EasingDirection.Out
+    )
+    local tween = TweenService:Create(rootPart, tweenInfo, {CFrame = CFrame.new(pos)})
+    tween:Play()
+    tween.Completed:Wait()
+end
+
+-- ============================================================
+--               STUNNING UI - GLASS + NEON
+-- ============================================================
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "RitualHub"
 screenGui.Parent = CoreGui
 screenGui.ResetOnSpawn = false
 
--- MAIN FRAME (Draggable)
+-- Background blur
+local blur = Instance.new("BlurEffect")
+blur.Size = 0
+blur.Parent = Lighting
+
+-- MAIN FRAME
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 420, 0, 420)
-mainFrame.Position = UDim2.new(0.5, -210, 0.5, -210)
-mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 30)
-mainFrame.BackgroundTransparency = 0.15
+mainFrame.Size = UDim2.new(0, 460, 0, 520)
+mainFrame.Position = UDim2.new(0.5, -230, 0.5, -260)
+mainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 25)
+mainFrame.BackgroundTransparency = 0.25
 mainFrame.BorderSizePixel = 2
-mainFrame.BorderColor3 = Color3.fromRGB(180, 80, 255)
+mainFrame.BorderColor3 = Color3.fromRGB(120, 60, 255)
+mainFrame.ClipsDescendants = true
 mainFrame.Active = true
 mainFrame.Draggable = true
 mainFrame.Parent = screenGui
 
--- Title Bar
+-- Glow border
+local glowBorder = Instance.new("Frame")
+glowBorder.Size = UDim2.new(1, -4, 1, -4)
+glowBorder.Position = UDim2.new(0, 2, 0, 2)
+glowBorder.BackgroundTransparency = 1
+glowBorder.BorderSizePixel = 0
+glowBorder.Parent = mainFrame
+
+local gradient = Instance.new("UIGradient")
+gradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(180, 80, 255)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(80, 180, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 80, 200))
+})
+gradient.Rotation = 45
+gradient.Parent = glowBorder
+
+-- TITLE BAR
 local titleBar = Instance.new("Frame")
-titleBar.Size = UDim2.new(1, 0, 0, 40)
-titleBar.BackgroundColor3 = Color3.fromRGB(40, 20, 80)
+titleBar.Size = UDim2.new(1, 0, 0, 50)
+titleBar.BackgroundColor3 = Color3.fromRGB(20, 10, 45)
+titleBar.BackgroundTransparency = 0.3
 titleBar.BorderSizePixel = 0
 titleBar.Parent = mainFrame
 
+local titleGrad = Instance.new("UIGradient")
+titleGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(150, 50, 255)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(50, 150, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 50, 150))
+})
+titleGrad.Rotation = 0
+titleGrad.Parent = titleBar
+
+spawn(function()
+    while wait(0.05) do
+        titleGrad.Rotation = (titleGrad.Rotation + 0.5) % 360
+    end
+end)
+
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(0.7, 0, 1, 0)
+title.Size = UDim2.new(0.5, 0, 1, 0)
 title.Position = UDim2.new(0.05, 0, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "⚔️ RITUAL HUB"
-title.TextColor3 = Color3.fromRGB(255, 200, 100)
+title.Text = "⚡ RITUAL HUB"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.TextScaled = true
 title.Font = Enum.Font.GothamBold
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.Parent = titleBar
 
--- Minimize Button (for mobile)
+-- Sea indicator
+local seaLabel = Instance.new("TextLabel")
+seaLabel.Size = UDim2.new(0.4, 0, 1, 0)
+seaLabel.Position = UDim2.new(0.55, 0, 0, 0)
+seaLabel.BackgroundTransparency = 1
+seaLabel.Text = "🌊 " .. getSea()
+seaLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+seaLabel.TextScaled = true
+seaLabel.Font = Enum.Font.GothamMedium
+seaLabel.TextXAlignment = Enum.TextXAlignment.Right
+seaLabel.Parent = titleBar
+
+-- Update sea label
+spawn(function()
+    while wait(3) do
+        seaLabel.Text = "🌊 " .. getSea()
+    end
+end)
+
+-- MINIMIZE / CLOSE
 local minBtn = Instance.new("TextButton")
-minBtn.Size = UDim2.new(0, 40, 1, -8)
-minBtn.Position = UDim2.new(0.85, 0, 0.5, 0)
-minBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 100)
+minBtn.Size = UDim2.new(0, 45, 0.7, 0)
+minBtn.Position = UDim2.new(0.85, 0, 0.15, 0)
+minBtn.BackgroundColor3 = Color3.fromRGB(60, 40, 120)
+minBtn.BackgroundTransparency = 0.3
 minBtn.Text = "−"
 minBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 minBtn.TextScaled = true
 minBtn.Font = Enum.Font.GothamBold
+minBtn.BorderSizePixel = 1
+minBtn.BorderColor3 = Color3.fromRGB(150, 100, 255)
 minBtn.Parent = titleBar
 
--- Close Button
 local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.new(0, 40, 1, -8)
-closeBtn.Position = UDim2.new(0.93, 0, 0.5, 0)
+closeBtn.Size = UDim2.new(0, 45, 0.7, 0)
+closeBtn.Position = UDim2.new(0.93, 0, 0.15, 0)
 closeBtn.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
+closeBtn.BackgroundTransparency = 0.2
 closeBtn.Text = "✕"
 closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 closeBtn.TextScaled = true
 closeBtn.Font = Enum.Font.GothamBold
+closeBtn.BorderSizePixel = 1
+closeBtn.BorderColor3 = Color3.fromRGB(255, 80, 80)
 closeBtn.Parent = titleBar
 closeBtn.MouseButton1Click:Connect(function() screenGui:Destroy() end)
 
--- Minimize logic
 local minimized = false
 minBtn.MouseButton1Click:Connect(function()
     minimized = not minimized
     if minimized then
-        mainFrame.Size = UDim2.new(0, 200, 0, 40)
+        mainFrame:TweenSize(UDim2.new(0, 200, 0, 50), "Out", "Quad", 0.3, true)
         minBtn.Text = "+"
     else
-        mainFrame.Size = UDim2.new(0, 420, 0, 420)
+        mainFrame:TweenSize(UDim2.new(0, 460, 0, 520), "Out", "Quad", 0.3, true)
         minBtn.Text = "−"
     end
     for _, child in pairs(mainFrame:GetChildren()) do
-        if child ~= titleBar and child ~= minBtn and child ~= closeBtn then
+        if child ~= titleBar and child ~= minBtn and child ~= closeBtn and child ~= glowBorder then
             child.Visible = not minimized
         end
     end
 end)
 
--- Tab Buttons
+-- TAB SYSTEM
 local tabFrame = Instance.new("Frame")
-tabFrame.Size = UDim2.new(1, 0, 0, 45)
-tabFrame.Position = UDim2.new(0, 0, 0, 40)
-tabFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 20)
+tabFrame.Size = UDim2.new(1, 0, 0, 50)
+tabFrame.Position = UDim2.new(0, 0, 0, 50)
+tabFrame.BackgroundColor3 = Color3.fromRGB(15, 10, 30)
+tabFrame.BackgroundTransparency = 0.3
 tabFrame.BorderSizePixel = 0
 tabFrame.Parent = mainFrame
 
@@ -126,19 +217,26 @@ local currentTab = "Farm"
 
 for i, name in ipairs(tabs) do
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1 / #tabs, -4, 1, -4)
-    btn.Position = UDim2.new((i - 1) / #tabs, 2, 0, 2)
-    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+    btn.Size = UDim2.new(1 / #tabs, -6, 1, -6)
+    btn.Position = UDim2.new((i - 1) / #tabs, 3, 0, 3)
+    btn.BackgroundColor3 = Color3.fromRGB(30, 20, 60)
+    btn.BackgroundTransparency = 0.4
     btn.Text = name
-    btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    btn.TextColor3 = Color3.fromRGB(220, 220, 255)
     btn.TextScaled = true
-    btn.Font = Enum.Font.GothamMedium
+    btn.Font = Enum.Font.GothamBold
+    btn.BorderSizePixel = 1
+    btn.BorderColor3 = Color3.fromRGB(80, 40, 180)
     btn.Parent = tabFrame
     tabBtns[name] = btn
     btn.MouseButton1Click:Connect(function()
         currentTab = name
-        for _, v in pairs(tabBtns) do v.BackgroundColor3 = Color3.fromRGB(30, 30, 50) end
+        for _, v in pairs(tabBtns) do
+            v.BackgroundColor3 = Color3.fromRGB(30, 20, 60)
+            v.BorderColor3 = Color3.fromRGB(80, 40, 180)
+        end
         btn.BackgroundColor3 = Color3.fromRGB(80, 40, 180)
+        btn.BorderColor3 = Color3.fromRGB(200, 150, 255)
         for _, c in pairs(mainFrame:GetChildren()) do
             if c.Name == "TabContent" then c.Visible = false end
         end
@@ -147,58 +245,73 @@ for i, name in ipairs(tabs) do
     end)
 end
 
--- =============================================
---   HELPER: Create Toggle Buttons (Mobile size)
--- =============================================
+-- ============================================================
+--          HELPER: MODERN TOGGLE BUTTON
+-- ============================================================
 local function createToggle(parent, text, yPos, default, toggleRef)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 180, 0, 40)
+    btn.Size = UDim2.new(0, 200, 0, 45)
     btn.Position = UDim2.new(0, 10, 0, yPos)
-    btn.BackgroundColor3 = default and Color3.fromRGB(50, 180, 50) or Color3.fromRGB(70, 70, 70)
+    btn.BackgroundColor3 = default and Color3.fromRGB(40, 180, 40) or Color3.fromRGB(50, 50, 80)
+    btn.BackgroundTransparency = 0.2
     btn.Text = text .. (default and " ✅" or " ❌")
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.TextScaled = true
     btn.Font = Enum.Font.GothamBold
+    btn.BorderSizePixel = 1
+    btn.BorderColor3 = default and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(100, 80, 200)
     btn.Parent = parent
+    btn.MouseEnter:Connect(function() btn.BackgroundTransparency = 0.05 end)
+    btn.MouseLeave:Connect(function() btn.BackgroundTransparency = 0.2 end)
     local toggled = default
+    if toggleRef then _G.Ritual[toggleRef] = default end
     btn.MouseButton1Click:Connect(function()
         toggled = not toggled
-        btn.BackgroundColor3 = toggled and Color3.fromRGB(50, 180, 50) or Color3.fromRGB(70, 70, 70)
+        btn.BackgroundColor3 = toggled and Color3.fromRGB(40, 180, 40) or Color3.fromRGB(50, 50, 80)
+        btn.BorderColor3 = toggled and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(100, 80, 200)
         btn.Text = text .. (toggled and " ✅" or " ❌")
         if toggleRef then _G.Ritual[toggleRef] = toggled end
     end)
     return btn
 end
 
--- =============================================
---          TAB 1: FARM CONTENT
--- =============================================
+-- ============================================================
+--          TAB 1: FARM
+-- ============================================================
 local farmContent = Instance.new("Frame")
 farmContent.Name = "FarmContent"
-farmContent.Size = UDim2.new(1, -10, 1, -95)
-farmContent.Position = UDim2.new(0, 5, 0, 90)
+farmContent.Size = UDim2.new(1, -10, 1, -110)
+farmContent.Position = UDim2.new(0, 5, 0, 105)
 farmContent.BackgroundTransparency = 1
 farmContent.Parent = mainFrame
 
 createToggle(farmContent, "Auto Farm", 5, false, "Farm")
-createToggle(farmContent, "Auto Quest", 50, false, "Quest")
-createToggle(farmContent, "Auto Collect", 95, false, "Collect")
-createToggle(farmContent, "Auto Sea Beast", 140, false, "SeaBeast")
-createToggle(farmContent, "Auto Ship Farm", 185, false, "ShipFarm")
-createToggle(farmContent, "Anti AFK", 230, true, "AntiAFK")
+createToggle(farmContent, "Auto Quest", 55, false, "Quest")
+createToggle(farmContent, "Auto Collect", 105, false, "Collect")
+createToggle(farmContent, "Auto Sea Beast", 155, false, "SeaBeast")
+createToggle(farmContent, "Auto Ship Farm", 205, false, "ShipFarm")
+createToggle(farmContent, "Anti AFK", 255, true, "AntiAFK")
 
 -- Stats display
-local stats = Instance.new("TextLabel")
-stats.Size = UDim2.new(0, 190, 0, 130)
+local stats = Instance.new("Frame")
+stats.Size = UDim2.new(0, 210, 0, 150)
 stats.Position = UDim2.new(0.5, 10, 0, 10)
-stats.BackgroundColor3 = Color3.fromRGB(20, 20, 40)
+stats.BackgroundColor3 = Color3.fromRGB(20, 15, 40)
 stats.BackgroundTransparency = 0.4
-stats.Text = "Level: 0\nBeli: 0\nFruit: None\nFrags: 0"
-stats.TextColor3 = Color3.fromRGB(220, 220, 255)
-stats.TextScaled = true
-stats.Font = Enum.Font.GothamMedium
-stats.TextXAlignment = Enum.TextXAlignment.Left
+stats.BorderSizePixel = 1
+stats.BorderColor3 = Color3.fromRGB(100, 60, 200)
 stats.Parent = farmContent
+
+local statsLabel = Instance.new("TextLabel")
+statsLabel.Size = UDim2.new(1, -10, 1, -10)
+statsLabel.Position = UDim2.new(0, 5, 0, 5)
+statsLabel.BackgroundTransparency = 1
+statsLabel.Text = "Level: 0\nBeli: 0\nFruit: None\nFrags: 0"
+statsLabel.TextColor3 = Color3.fromRGB(230, 230, 255)
+statsLabel.TextScaled = true
+statsLabel.Font = Enum.Font.GothamMedium
+statsLabel.TextXAlignment = Enum.TextXAlignment.Left
+statsLabel.Parent = stats
 
 spawn(function()
     while wait(2) do
@@ -207,111 +320,158 @@ spawn(function()
             local beli = player:FindFirstChild("Data") and player.Data:FindFirstChild("Beli") and player.Data.Beli.Value or 0
             local fruit = player:FindFirstChild("Data") and player.Data:FindFirstChild("Fruit") and player.Data.Fruit.Value or "None"
             local frags = player:FindFirstChild("Data") and player.Data:FindFirstChild("Fragments") and player.Data.Fragments.Value or 0
-            stats.Text = "Level: "..lvl.."\nBeli: "..beli.."\nFruit: "..fruit.."\nFrags: "..frags
+            statsLabel.Text = "Level: "..lvl.."\nBeli: "..beli.."\nFruit: "..fruit.."\nFrags: "..frags
         end)
     end
 end)
 
--- =============================================
+-- ============================================================
 --          TAB 2: RAIDS & DUNGEONS
--- =============================================
+-- ============================================================
 local raidContent = Instance.new("Frame")
 raidContent.Name = "RaidsContent"
-raidContent.Size = UDim2.new(1, -10, 1, -95)
-raidContent.Position = UDim2.new(0, 5, 0, 90)
+raidContent.Size = UDim2.new(1, -10, 1, -110)
+raidContent.Position = UDim2.new(0, 5, 0, 105)
 raidContent.BackgroundTransparency = 1
 raidContent.Visible = false
 raidContent.Parent = mainFrame
 
 createToggle(raidContent, "Auto Raid (Awaken)", 5, false, "Raid")
-createToggle(raidContent, "Auto Dungeon", 50, false, "Dungeon")
+createToggle(raidContent, "Auto Dungeon", 55, false, "Dungeon")
 
 local raidInfo = Instance.new("TextLabel")
 raidInfo.Size = UDim2.new(0.9, 0, 0, 80)
-raidInfo.Position = UDim2.new(0.05, 0, 0, 100)
+raidInfo.Position = UDim2.new(0.05, 0, 0, 120)
 raidInfo.BackgroundTransparency = 0.5
-raidInfo.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
-raidInfo.Text = "Auto Raid: teleports to portal,\nenters & kills enemies.\nAuto Dungeon: clears floors."
-raidInfo.TextColor3 = Color3.fromRGB(200, 200, 200)
+raidInfo.BackgroundColor3 = Color3.fromRGB(30, 20, 60)
+raidInfo.BorderSizePixel = 1
+raidInfo.BorderColor3 = Color3.fromRGB(100, 60, 200)
+raidInfo.Text = "⚔️ Auto Raid: enters and clears raids\n🏰 Auto Dungeon: clears Castle on Sea"
+raidInfo.TextColor3 = Color3.fromRGB(220, 220, 255)
 raidInfo.TextScaled = true
 raidInfo.Font = Enum.Font.GothamMedium
 raidInfo.Parent = raidContent
 
--- =============================================
---          TAB 3: TELEPORTS
--- =============================================
+-- ============================================================
+--          TAB 3: TELEPORTS (with tween)
+-- ============================================================
 local teleContent = Instance.new("Frame")
 teleContent.Name = "TeleportsContent"
-teleContent.Size = UDim2.new(1, -10, 1, -95)
-teleContent.Position = UDim2.new(0, 5, 0, 90)
+teleContent.Size = UDim2.new(1, -10, 1, -110)
+teleContent.Position = UDim2.new(0, 5, 0, 105)
 teleContent.BackgroundTransparency = 1
 teleContent.Visible = false
 teleContent.Parent = mainFrame
 
 local locations = {
-    {"Jungle", Vector3.new(-1220, 80, 2850)},
-    {"Pirate Village", Vector3.new(-60, 10, 2850)},
-    {"Marine Fort", Vector3.new(2700, 15, 2800)},
-    {"Sky Islands", Vector3.new(3500, 700, 1200)},
-    {"Ice Castle", Vector3.new(4800, 350, -1100)},
-    {"Kingdom of Rose", Vector3.new(-50, 50, -50)},
-    {"Sea of Treats", Vector3.new(2700, 10, -1200)},
-    {"Raid Portal", Vector3.new(-100, 20, -50)},
-    {"Castle on Sea", Vector3.new(2800, 10, -1300)}
+    {"🏝️ Jungle", Vector3.new(-1220, 80, 2850)},
+    {"🏴‍☠️ Pirate Village", Vector3.new(-60, 10, 2850)},
+    {"⚓ Marine Fort", Vector3.new(2700, 15, 2800)},
+    {"☁️ Sky Islands", Vector3.new(3500, 700, 1200)},
+    {"❄️ Ice Castle", Vector3.new(4800, 350, -1100)},
+    {"🌹 Kingdom of Rose", Vector3.new(-50, 50, -50)},
+    {"🍭 Sea of Treats", Vector3.new(2700, 10, -1200)},
+    {"🌀 Raid Portal", Vector3.new(-100, 20, -50)},
+    {"🏰 Castle on Sea", Vector3.new(2800, 10, -1300)}
 }
 
 for i, loc in ipairs(locations) do
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 125, 0, 40)
+    btn.Size = UDim2.new(0, 135, 0, 45)
     local row = math.floor((i-1)/3)
     local col = (i-1)%3
-    btn.Position = UDim2.new(0, 5 + col*135, 0, 5 + row*48)
-    btn.BackgroundColor3 = Color3.fromRGB(50, 40, 90)
+    btn.Position = UDim2.new(0, 5 + col*145, 0, 5 + row*52)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 30, 80)
+    btn.BackgroundTransparency = 0.3
     btn.Text = loc[1]
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.TextScaled = true
     btn.Font = Enum.Font.GothamBold
+    btn.BorderSizePixel = 1
+    btn.BorderColor3 = Color3.fromRGB(100, 60, 200)
     btn.Parent = teleContent
     btn.MouseButton1Click:Connect(function()
         pcall(function()
             if rootPart then
-                rootPart.CFrame = CFrame.new(loc[2] + Vector3.new(0, 15, 0))
+                tweenTo(loc[2] + Vector3.new(0, 15, 0), 200) -- smooth move
             end
         end)
     end)
+    btn.MouseEnter:Connect(function() btn.BackgroundTransparency = 0.1 end)
+    btn.MouseLeave:Connect(function() btn.BackgroundTransparency = 0.3 end)
 end
 
--- =============================================
---          TAB 4: MISC (ESP / SNIPER)
--- =============================================
+-- ============================================================
+--          TAB 4: MISC
+-- ============================================================
 local miscContent = Instance.new("Frame")
 miscContent.Name = "MiscContent"
-miscContent.Size = UDim2.new(1, -10, 1, -95)
-miscContent.Position = UDim2.new(0, 5, 0, 90)
+miscContent.Size = UDim2.new(1, -10, 1, -110)
+miscContent.Position = UDim2.new(0, 5, 0, 105)
 miscContent.BackgroundTransparency = 1
 miscContent.Visible = false
 miscContent.Parent = mainFrame
 
 createToggle(miscContent, "Fruit Sniper", 5, false, "FruitSniper")
-createToggle(miscContent, "ESP (Fruits/Chests)", 50, false, "ESP")
-createToggle(miscContent, "Auto Stats (Melee)", 95, false, "AutoStats")
+createToggle(miscContent, "ESP (Fruits/Chests)", 55, false, "ESP")
+createToggle(miscContent, "Auto Stats (Melee)", 105, false, "AutoStats")
 
 local infoMisc = Instance.new("TextLabel")
-infoMisc.Size = UDim2.new(0.9, 0, 0, 60)
-infoMisc.Position = UDim2.new(0.05, 0, 0, 150)
+infoMisc.Size = UDim2.new(0.9, 0, 0, 70)
+infoMisc.Position = UDim2.new(0.05, 0, 0, 170)
 infoMisc.BackgroundTransparency = 0.5
-infoMisc.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
-infoMisc.Text = "Fruit Sniper: auto-detects fruits\nESP: highlights fruits & chests"
-infoMisc.TextColor3 = Color3.fromRGB(200, 200, 200)
+infoMisc.BackgroundColor3 = Color3.fromRGB(30, 20, 60)
+infoMisc.BorderSizePixel = 1
+infoMisc.BorderColor3 = Color3.fromRGB(100, 60, 200)
+infoMisc.Text = "🍎 Fruit Sniper: smooth-tweens to fruits\n👁️ ESP: highlights fruits (red) & chests (yellow)\n📈 Auto Stats: puts points into Melee"
+infoMisc.TextColor3 = Color3.fromRGB(220, 220, 255)
 infoMisc.TextScaled = true
 infoMisc.Font = Enum.Font.GothamMedium
 infoMisc.Parent = miscContent
 
--- =============================================
---          CORE LOGIC - ALL FEATURES
--- =============================================
+-- ============================================================
+--                 ACTIVE STATUS INDICATOR
+-- ============================================================
+local statusBar = Instance.new("Frame")
+statusBar.Size = UDim2.new(1, 0, 0, 25)
+statusBar.Position = UDim2.new(0, 0, 1, -25)
+statusBar.BackgroundColor3 = Color3.fromRGB(10, 5, 20)
+statusBar.BackgroundTransparency = 0.5
+statusBar.BorderSizePixel = 0
+statusBar.Parent = mainFrame
 
--- 1. GET NEAREST ENEMY (Excludes Players)
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(1, 0, 1, 0)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Text = "⏳ Idle"
+statusLabel.TextColor3 = Color3.fromRGB(180, 180, 200)
+statusLabel.TextScaled = true
+statusLabel.Font = Enum.Font.GothamMedium
+statusLabel.Parent = statusBar
+
+spawn(function()
+    while wait(0.5) do
+        local active = {}
+        for k, v in pairs(_G.Ritual) do
+            if v and k ~= "ESP" and k ~= "AutoStats" and k ~= "AntiAFK" then
+                table.insert(active, k)
+            end
+        end
+        if #active > 0 then
+            statusLabel.Text = "🟢 Active: " .. table.concat(active, ", ")
+            statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+        else
+            statusLabel.Text = "⏳ Idle"
+            statusLabel.TextColor3 = Color3.fromRGB(180, 180, 200)
+        end
+    end
+end)
+
+-- ============================================================
+--               CORE LOGIC - ALL FEATURES (Tween based)
+-- ============================================================
+
+-- Get nearest enemy (NPCs only)
 function getNearestEnemy(range)
     range = range or 500
     local closest, dist = nil, math.huge
@@ -331,32 +491,38 @@ function getNearestEnemy(range)
     return closest
 end
 
--- 2. ATTACK FUNCTION
+-- Attack target (tween to it first)
 function attackTarget(target)
     if not target or not rootPart then return end
     local hrp = target:FindFirstChild("HumanoidRootPart")
     if hrp then
-        rootPart.CFrame = CFrame.new(hrp.Position + Vector3.new(0, 5, 2))
-        wait(0.1)
+        local targetPos = hrp.Position + Vector3.new(0, 5, 2)
+        tweenTo(targetPos, 120) -- move smoothly
+        wait(0.3)
         local tool = character:FindFirstChildOfClass("Tool")
-        if tool then tool:Activate() end
-        humanoid:StartAttack(0.5)
+        if tool then
+            tool:Activate()
+        else
+            humanoid:StartAttack(0.5)
+        end
     end
 end
 
--- 3. AUTO FARM
+-- 1. AUTO FARM
 spawn(function()
-    while wait(0.15) do
+    while wait(0.1) do
         if _G.Ritual.Farm and character and humanoid and rootPart then
             pcall(function()
                 local enemy = getNearestEnemy(500)
-                if enemy then attackTarget(enemy) end
+                if enemy then
+                    attackTarget(enemy)
+                end
             end)
         end
     end
 end)
 
--- 4. AUTO QUEST (Level-Based NPC)
+-- 2. AUTO QUEST (tween to NPC)
 function getQuestNPC()
     local lvl = player:FindFirstChild("Data") and player.Data:FindFirstChild("Level") and player.Data.Level.Value or 0
     local names = {"Pirate", "Monkey", "Soldier", "Bandit", "Mob Leader"}
@@ -379,30 +545,30 @@ spawn(function()
                 local npc = getQuestNPC()
                 if npc then
                     local npcPos = npc:FindFirstChild("HumanoidRootPart").Position
-                    if (rootPart.Position - npcPos).magnitude > 20 then
-                        rootPart.CFrame = CFrame.new(npcPos + Vector3.new(0, 5, 3))
+                    if (rootPart.Position - npcPos).magnitude > 15 then
+                        tweenTo(npcPos + Vector3.new(0, 5, 3), 100)
                     end
-                    wait(0.5)
-                    -- Simulate interact (stand close)
-                    rootPart.CFrame = CFrame.new(npcPos + Vector3.new(0, 5, 0))
                     wait(0.3)
+                    -- Stand close to interact
+                    tweenTo(npcPos + Vector3.new(0, 5, 0), 50)
+                    wait(0.2)
                 end
             end)
         end
     end
 end)
 
--- 5. AUTO COLLECT
+-- 3. AUTO COLLECT (tween to items)
 spawn(function()
-    while wait(0.5) do
+    while wait(0.3) do
         if _G.Ritual.Collect and character and rootPart then
             pcall(function()
                 for _, v in pairs(workspace:GetChildren()) do
                     if v:IsA("Tool") or (v:IsA("Part") and (v.Name:find("Fruit") or v.Name:find("Money") or v.Name:find("Chest"))) then
                         local pos = v:IsA("Tool") and v:FindFirstChild("Handle") and v.Handle.Position or (v:IsA("Part") and v.Position)
-                        if pos and (pos - rootPart.Position).magnitude < 120 then
-                            rootPart.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
-                            wait(0.2)
+                        if pos and (pos - rootPart.Position).magnitude < 150 then
+                            tweenTo(pos + Vector3.new(0, 3, 0), 80)
+                            wait(0.1)
                         end
                     end
                 end
@@ -411,19 +577,19 @@ spawn(function()
     end
 end)
 
--- 6. AUTO SEA BEAST
+-- 4. AUTO SEA BEAST
 spawn(function()
-    while wait(2) do
+    while wait(1) do
         if _G.Ritual.SeaBeast and character then
             pcall(function()
                 for _, v in pairs(workspace:GetChildren()) do
                     if v:IsA("Model") and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
                         if v.Name:lower():find("sea") or v.Name:lower():find("beast") then
-                            if (rootPart.Position - v.HumanoidRootPart.Position).magnitude < 800 then
+                            local dist = (rootPart.Position - v.HumanoidRootPart.Position).magnitude
+                            if dist < 800 then
                                 attackTarget(v)
                             else
-                                -- Teleport near sea beast
-                                rootPart.CFrame = CFrame.new(v.HumanoidRootPart.Position + Vector3.new(0, 20, 50))
+                                tweenTo(v.HumanoidRootPart.Position + Vector3.new(0, 20, 50), 200)
                             end
                         end
                     end
@@ -433,7 +599,7 @@ spawn(function()
     end
 end)
 
--- 7. AUTO SHIP FARM
+-- 5. AUTO SHIP FARM
 spawn(function()
     while wait(1) do
         if _G.Ritual.ShipFarm and character then
@@ -450,58 +616,56 @@ spawn(function()
     end
 end)
 
--- 8. AUTO RAID (Simplified: teleports to raid island & kills enemies)
+-- 6. AUTO RAID (tween to raid area)
 spawn(function()
     while wait(1) do
         if _G.Ritual.Raid and character then
             pcall(function()
                 local raidIsland = workspace:FindFirstChild("Raid") or workspace:FindFirstChild("RaidIsland")
                 if raidIsland then
-                    local target = getNearestEnemy(1000)
-                    if target then
-                        attackTarget(target)
+                    local enemy = getNearestEnemy(1000)
+                    if enemy then
+                        attackTarget(enemy)
                     else
-                        -- Teleport to raid island center
                         local center = raidIsland:FindFirstChild("HumanoidRootPart") or raidIsland:FindFirstChild("Part")
                         if center then
-                            rootPart.CFrame = CFrame.new(center.Position + Vector3.new(0, 10, 0))
+                            tweenTo(center.Position + Vector3.new(0, 10, 0), 150)
                         end
                     end
                 else
-                    -- Teleport to Raid Portal area to start
-                    rootPart.CFrame = CFrame.new(Vector3.new(-100, 20, -50) + Vector3.new(0, 5, 0))
+                    -- Smoothly move to Raid Portal
+                    tweenTo(Vector3.new(-100, 20, -50) + Vector3.new(0, 5, 0), 200)
                 end
             end)
         end
     end
 end)
 
--- 9. AUTO DUNGEON (Castle on Sea)
+-- 7. AUTO DUNGEON (tween to Castle on Sea)
 spawn(function()
     while wait(1) do
         if _G.Ritual.Dungeon and character then
             pcall(function()
                 local dungeon = workspace:FindFirstChild("Castle") or workspace:FindFirstChild("Dungeon")
                 if dungeon then
-                    local target = getNearestEnemy(1000)
-                    if target then
-                        attackTarget(target)
+                    local enemy = getNearestEnemy(1000)
+                    if enemy then
+                        attackTarget(enemy)
                     else
                         local part = dungeon:FindFirstChild("HumanoidRootPart") or dungeon:FindFirstChild("Part")
                         if part then
-                            rootPart.CFrame = CFrame.new(part.Position + Vector3.new(0, 10, 5))
+                            tweenTo(part.Position + Vector3.new(0, 10, 5), 150)
                         end
                     end
                 else
-                    -- Teleport to Castle on Sea
-                    rootPart.CFrame = CFrame.new(Vector3.new(2800, 10, -1300) + Vector3.new(0, 5, 0))
+                    tweenTo(Vector3.new(2800, 10, -1300) + Vector3.new(0, 5, 0), 200)
                 end
             end)
         end
     end
 end)
 
--- 10. FRUIT SNIPER
+-- 8. FRUIT SNIPER (tween to fruits)
 spawn(function()
     while wait(0.5) do
         if _G.Ritual.FruitSniper and character and rootPart then
@@ -510,13 +674,12 @@ spawn(function()
                     if v:IsA("Tool") and v:FindFirstChild("Handle") then
                         if v.Name:lower():find("fruit") then
                             local pos = v.Handle.Position
-                            if pos and (pos - rootPart.Position).magnitude < 500 then
-                                rootPart.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
+                            if pos and (pos - rootPart.Position).magnitude < 600 then
+                                tweenTo(pos + Vector3.new(0, 3, 0), 120)
                                 wait(0.2)
-                                -- Equip/Collect
                                 local hrp = character:FindFirstChild("HumanoidRootPart")
                                 if hrp then
-                                    hrp.CFrame = CFrame.new(pos + Vector3.new(0, 2, 0))
+                                    tweenTo(pos + Vector3.new(0, 2, 0), 60)
                                 end
                             end
                         end
@@ -527,23 +690,24 @@ spawn(function()
     end
 end)
 
--- 11. ESP (Fruits & Chests)
+-- 9. ESP (working)
 spawn(function()
-    while wait(1) do
+    while wait(0.5) do
         if _G.Ritual.ESP then
             pcall(function()
                 for _, v in pairs(workspace:GetChildren()) do
-                    if v:IsA("Tool") or v:IsA("Part") then
+                    if v:IsA("Tool") or (v:IsA("Part") and (v.Name:find("Chest") or v.Name:find("Fruit"))) then
                         local isFruit = v.Name:lower():find("fruit") or (v:IsA("Tool") and v:FindFirstChild("Handle"))
-                        local isChest = v.Name:lower():find("chest") or v.Name:lower():find("chest")
+                        local isChest = v.Name:lower():find("chest")
                         if isFruit or isChest then
                             local highlight = v:FindFirstChild("RitualESP")
                             if not highlight then
                                 local h = Instance.new("Highlight")
                                 h.Name = "RitualESP"
-                                h.FillColor = isFruit and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(255, 255, 0)
-                                h.FillTransparency = 0.5
+                                h.FillColor = isFruit and Color3.fromRGB(255, 50, 50) or Color3.fromRGB(255, 255, 0)
+                                h.FillTransparency = 0.4
                                 h.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                h.OutlineTransparency = 0.2
                                 h.Parent = v
                             end
                         end
@@ -551,7 +715,6 @@ spawn(function()
                 end
             end)
         else
-            -- Remove ESP
             for _, v in pairs(workspace:GetDescendants()) do
                 if v.Name == "RitualESP" then v:Destroy() end
             end
@@ -559,9 +722,9 @@ spawn(function()
     end
 end)
 
--- 12. AUTO STATS (put points into Melee)
+-- 10. AUTO STATS
 spawn(function()
-    while wait(3) do
+    while wait(2) do
         if _G.Ritual.AutoStats then
             pcall(function()
                 local stats = player:FindFirstChild("Data") and player.Data:FindFirstChild("Stats")
@@ -582,29 +745,32 @@ spawn(function()
     end
 end)
 
--- 13. ANTI AFK
+-- 11. ANTI AFK
 spawn(function()
-    while wait(20) do
+    while wait(15) do
         if _G.Ritual.AntiAFK then
             pcall(function()
                 VirtualUser:CaptureController()
                 VirtualUser:ClickButton2(Vector2.new())
                 if rootPart then
-                    TweenService:Create(rootPart, TweenInfo.new(0.3), {CFrame = rootPart.CFrame * CFrame.new(0,0,0.3)}):Play()
+                    TweenService:Create(rootPart, TweenInfo.new(0.3), {CFrame = rootPart.CFrame * CFrame.new(0, 0, 0.5)}):Play()
                 end
             end)
         end
     end
 end)
 
--- =============================================
---      MOBILE TOGGLE: TAP TITLE TO MINIMIZE
--- =============================================
+-- ============================================================
+--          MOBILE: TAP TITLE TO MINIMIZE
+-- ============================================================
 title.MouseButton1Click:Connect(function()
     minBtn.MouseButton1Click:Fire()
 end)
 
--- Highlight default tab
+-- ============================================================
+--              INITIAL SETUP
+-- ============================================================
 tabBtns["Farm"].BackgroundColor3 = Color3.fromRGB(80, 40, 180)
+tabBtns["Farm"].BorderColor3 = Color3.fromRGB(200, 150, 255)
 
-print("⚔️ Ritual Hub loaded! All features ready for mobile.")
+print("⚡ Ritual Hub 3.0 loaded! Anti-cheat tweens + sea detection active.")
