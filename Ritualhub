@@ -1,199 +1,610 @@
-local Players = game:GetService("Players")
+-- =============================================
+--         RITUAL HUB - BLOX FRUITS
+--     Mobile-Optimized | Delta Executor
+--    All Features (No PVP) | English Only
+-- =============================================
+
+local player = game:GetService("Players").LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local rootPart = character:WaitForChild("HumanoidRootPart")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local VirtualUser = game:GetService("VirtualUser")
+local TweenService = game:GetService("TweenService")
+local TeleportService = game:GetService("TeleportService")
+local CoreGui = game:GetService("CoreGui")
 
--- 1. WAIT FOR PLAYERGUI (Crucial for mobile executors)
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
+-- =============================================
+--              TOGGLES (GLOBALS)
+-- =============================================
+_G.Ritual = {
+    Farm = false,
+    Quest = false,
+    Collect = false,
+    SeaBeast = false,
+    ShipFarm = false,
+    Raid = false,
+    Dungeon = false,
+    AntiAFK = true,
+    FruitSniper = false,
+    ESP = false,
+    AutoStats = false,
+    Teleport = nil
+}
 
--- 2. CREATE GUI
-local gui = Instance.new("ScreenGui")
-gui.Name = "RitualHub"
-gui.ResetOnSpawn = false
-gui.Parent = playerGui
+-- =============================================
+--          MOBILE UI - RITUAL HUB
+-- =============================================
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "RitualHub"
+screenGui.Parent = CoreGui
+screenGui.ResetOnSpawn = false
 
--- MAIN WINDOW
-local main = Instance.new("Frame")
-main.Name = "MainFrame"
-main.Size = UDim2.fromOffset(360, 460) -- Slightly smaller to fit mobile screens better
-main.Position = UDim2.new(0.5, -180, 0.5, -230)
-main.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
-main.BorderSizePixel = 0
-main.Parent = gui
+-- MAIN FRAME (Draggable)
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 420, 0, 420)
+mainFrame.Position = UDim2.new(0.5, -210, 0.5, -210)
+mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 30)
+mainFrame.BackgroundTransparency = 0.15
+mainFrame.BorderSizePixel = 2
+mainFrame.BorderColor3 = Color3.fromRGB(180, 80, 255)
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = screenGui
 
-local mainCorner = Instance.new("UICorner")
-mainCorner.CornerRadius = UDim.new(0, 12)
-mainCorner.Parent = main
-
--- HEADER
-local header = Instance.new("Frame")
-header.Size = UDim2.new(1, 0, 0, 50)
-header.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-header.BorderSizePixel = 0
-header.Parent = main
-
-local headerCorner = Instance.new("UICorner")
-headerCorner.CornerRadius = UDim.new(0, 12)
-headerCorner.Parent = header
+-- Title Bar
+local titleBar = Instance.new("Frame")
+titleBar.Size = UDim2.new(1, 0, 0, 40)
+titleBar.BackgroundColor3 = Color3.fromRGB(40, 20, 80)
+titleBar.BorderSizePixel = 0
+titleBar.Parent = mainFrame
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -50, 1, 0)
-title.Position = UDim2.new(0, 10, 0, 0)
+title.Size = UDim2.new(0.7, 0, 1, 0)
+title.Position = UDim2.new(0.05, 0, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "RITUAL HUB"
-title.TextColor3 = Color3.new(1, 1, 1)
-title.TextSize = 18
+title.Text = "⚔️ RITUAL HUB"
+title.TextColor3 = Color3.fromRGB(255, 200, 100)
+title.TextScaled = true
 title.Font = Enum.Font.GothamBold
 title.TextXAlignment = Enum.TextXAlignment.Left
-title.Parent = header
+title.Parent = titleBar
 
--- CLOSE BUTTON
+-- Minimize Button (for mobile)
+local minBtn = Instance.new("TextButton")
+minBtn.Size = UDim2.new(0, 40, 1, -8)
+minBtn.Position = UDim2.new(0.85, 0, 0.5, 0)
+minBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 100)
+minBtn.Text = "−"
+minBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+minBtn.TextScaled = true
+minBtn.Font = Enum.Font.GothamBold
+minBtn.Parent = titleBar
+
+-- Close Button
 local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.new(0, 35, 0, 35)
-closeBtn.Position = UDim2.new(1, -45, 0, 7.5)
-closeBtn.Text = "×"
-closeBtn.TextSize = 20
-closeBtn.TextColor3 = Color3.new(1, 1, 1)
-closeBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-closeBtn.BorderSizePixel = 0
-closeBtn.Parent = header
+closeBtn.Size = UDim2.new(0, 40, 1, -8)
+closeBtn.Position = UDim2.new(0.93, 0, 0.5, 0)
+closeBtn.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.TextScaled = true
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.Parent = titleBar
+closeBtn.MouseButton1Click:Connect(function() screenGui:Destroy() end)
 
-local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(0, 8)
-closeCorner.Parent = closeBtn
-
-closeBtn.MouseButton1Click:Connect(function()
-	main.Visible = false
-	openBtn.Visible = true
+-- Minimize logic
+local minimized = false
+minBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    if minimized then
+        mainFrame.Size = UDim2.new(0, 200, 0, 40)
+        minBtn.Text = "+"
+    else
+        mainFrame.Size = UDim2.new(0, 420, 0, 420)
+        minBtn.Text = "−"
+    end
+    for _, child in pairs(mainFrame:GetChildren()) do
+        if child ~= titleBar and child ~= minBtn and child ~= closeBtn then
+            child.Visible = not minimized
+        end
+    end
 end)
 
--- SIDEBAR
-local sidebar = Instance.new("Frame")
-sidebar.Size = UDim2.new(0, 100, 1, -50)
-sidebar.Position = UDim2.new(0, 0, 0, 50)
-sidebar.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
-sidebar.BorderSizePixel = 0
-sidebar.Parent = main
+-- Tab Buttons
+local tabFrame = Instance.new("Frame")
+tabFrame.Size = UDim2.new(1, 0, 0, 45)
+tabFrame.Position = UDim2.new(0, 0, 0, 40)
+tabFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 20)
+tabFrame.BorderSizePixel = 0
+tabFrame.Parent = mainFrame
 
-local sideCorner = Instance.new("UICorner")
-sideCorner.CornerRadius = UDim.new(0, 0)
-sideCorner.Parent = sidebar
+local tabs = {"Farm", "Raids", "Teleports", "Misc"}
+local tabBtns = {}
+local currentTab = "Farm"
 
--- SIDEBAR BUTTONS
-local function makeBtn(text, yPos)
-	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(1, -10, 0, 40)
-	btn.Position = UDim2.fromOffset(5, yPos)
-	btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-	btn.Text = text
-	btn.TextColor3 = Color3.new(0.9, 0.9, 0.9)
-	btn.TextSize = 14
-	btn.Font = Enum.Font.GothamMedium
-	btn.BorderSizePixel = 0
-	btn.Parent = sidebar
-	
-	local c = Instance.new("UICorner")
-	c.CornerRadius = UDim.new(0, 6)
-	c.Parent = btn
-	
-	-- Touch highlight
-	btn.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.Touch then
-			btn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-		end
-	end)
-	
-	btn.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.Touch then
-			btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-		end
-	end)
-	
-	return btn
+for i, name in ipairs(tabs) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1 / #tabs, -4, 1, -4)
+    btn.Position = UDim2.new((i - 1) / #tabs, 2, 0, 2)
+    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+    btn.Text = name
+    btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    btn.TextScaled = true
+    btn.Font = Enum.Font.GothamMedium
+    btn.Parent = tabFrame
+    tabBtns[name] = btn
+    btn.MouseButton1Click:Connect(function()
+        currentTab = name
+        for _, v in pairs(tabBtns) do v.BackgroundColor3 = Color3.fromRGB(30, 30, 50) end
+        btn.BackgroundColor3 = Color3.fromRGB(80, 40, 180)
+        for _, c in pairs(mainFrame:GetChildren()) do
+            if c.Name == "TabContent" then c.Visible = false end
+        end
+        local content = mainFrame:FindFirstChild(name.."Content")
+        if content then content.Visible = true end
+    end)
 end
 
-makeBtn("Home", 10)
-makeBtn("Farm", 55)
-makeBtn("Teleport", 100)
-makeBtn("Settings", 145)
-
--- CONTENT AREA
-local content = Instance.new("Frame")
-content.Size = UDim2.new(1, -100, 1, -50)
-content.Position = UDim2.new(0, 100, 0, 50)
-content.BackgroundTransparency = 1
-content.Parent = main
-
-local welcome = Instance.new("TextLabel")
-welcome.Size = UDim2.new(1, -20, 0, 40)
-welcome.Position = UDim2.fromOffset(15, 15)
-welcome.BackgroundTransparency = 1
-welcome.Text = "Welcome"
-welcome.TextColor3 = Color3.new(1, 1, 1)
-welcome.TextSize = 20
-welcome.Font = Enum.Font.GothamBold
-welcome.Parent = content
-
--- OPEN BUTTON (Toggle)
-local openBtn = Instance.new("TextButton")
-openBtn.Size = UDim2.new(0, 50, 0, 50)
-openBtn.Position = UDim2.new(0, 10, 0, 10)
-openBtn.Text = "R"
-openBtn.TextSize = 20
-openBtn.Font = Enum.Font.GothamBold
-openBtn.TextColor3 = Color3.new(1, 1, 1)
-openBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-openBtn.BorderSizePixel = 0
-openBtn.Parent = gui
-
-local openCorner = Instance.new("UICorner")
-openCorner.CornerRadius = UDim.new(0, 10)
-openCorner.Parent = openBtn
-
-openBtn.MouseButton1Click:Connect(function()
-	main.Visible = true
-	openBtn.Visible = false
-end)
-
--- DRAGGING LOGIC (Mobile Friendly)
-local dragging = false
-local dragStart = nil
-local startPos = nil
-
-local function update(input)
-	local delta = input.Position - dragStart
-	main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+-- =============================================
+--   HELPER: Create Toggle Buttons (Mobile size)
+-- =============================================
+local function createToggle(parent, text, yPos, default, toggleRef)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 180, 0, 40)
+    btn.Position = UDim2.new(0, 10, 0, yPos)
+    btn.BackgroundColor3 = default and Color3.fromRGB(50, 180, 50) or Color3.fromRGB(70, 70, 70)
+    btn.Text = text .. (default and " ✅" or " ❌")
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.TextScaled = true
+    btn.Font = Enum.Font.GothamBold
+    btn.Parent = parent
+    local toggled = default
+    btn.MouseButton1Click:Connect(function()
+        toggled = not toggled
+        btn.BackgroundColor3 = toggled and Color3.fromRGB(50, 180, 50) or Color3.fromRGB(70, 70, 70)
+        btn.Text = text .. (toggled and " ✅" or " ❌")
+        if toggleRef then _G.Ritual[toggleRef] = toggled end
+    end)
+    return btn
 end
 
-openBtn.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging = true
-		dragStart = input.Position
-		startPos = main.Position
-		
-		input.Changed:Connect(function()
-			if input.UserInputState == Enum.UserInputState.End then
-				dragging = false
-			end
-		end)
-	end
+-- =============================================
+--          TAB 1: FARM CONTENT
+-- =============================================
+local farmContent = Instance.new("Frame")
+farmContent.Name = "FarmContent"
+farmContent.Size = UDim2.new(1, -10, 1, -95)
+farmContent.Position = UDim2.new(0, 5, 0, 90)
+farmContent.BackgroundTransparency = 1
+farmContent.Parent = mainFrame
+
+createToggle(farmContent, "Auto Farm", 5, false, "Farm")
+createToggle(farmContent, "Auto Quest", 50, false, "Quest")
+createToggle(farmContent, "Auto Collect", 95, false, "Collect")
+createToggle(farmContent, "Auto Sea Beast", 140, false, "SeaBeast")
+createToggle(farmContent, "Auto Ship Farm", 185, false, "ShipFarm")
+createToggle(farmContent, "Anti AFK", 230, true, "AntiAFK")
+
+-- Stats display
+local stats = Instance.new("TextLabel")
+stats.Size = UDim2.new(0, 190, 0, 130)
+stats.Position = UDim2.new(0.5, 10, 0, 10)
+stats.BackgroundColor3 = Color3.fromRGB(20, 20, 40)
+stats.BackgroundTransparency = 0.4
+stats.Text = "Level: 0\nBeli: 0\nFruit: None\nFrags: 0"
+stats.TextColor3 = Color3.fromRGB(220, 220, 255)
+stats.TextScaled = true
+stats.Font = Enum.Font.GothamMedium
+stats.TextXAlignment = Enum.TextXAlignment.Left
+stats.Parent = farmContent
+
+spawn(function()
+    while wait(2) do
+        pcall(function()
+            local lvl = player:FindFirstChild("Data") and player.Data:FindFirstChild("Level") and player.Data.Level.Value or 0
+            local beli = player:FindFirstChild("Data") and player.Data:FindFirstChild("Beli") and player.Data.Beli.Value or 0
+            local fruit = player:FindFirstChild("Data") and player.Data:FindFirstChild("Fruit") and player.Data.Fruit.Value or "None"
+            local frags = player:FindFirstChild("Data") and player.Data:FindFirstChild("Fragments") and player.Data.Fragments.Value or 0
+            stats.Text = "Level: "..lvl.."\nBeli: "..beli.."\nFruit: "..fruit.."\nFrags: "..frags
+        end)
+    end
 end)
 
-openBtn.InputChanged:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement then
-		if dragging then
-			update(input)
-		end
-	end
+-- =============================================
+--          TAB 2: RAIDS & DUNGEONS
+-- =============================================
+local raidContent = Instance.new("Frame")
+raidContent.Name = "RaidsContent"
+raidContent.Size = UDim2.new(1, -10, 1, -95)
+raidContent.Position = UDim2.new(0, 5, 0, 90)
+raidContent.BackgroundTransparency = 1
+raidContent.Visible = false
+raidContent.Parent = mainFrame
+
+createToggle(raidContent, "Auto Raid (Awaken)", 5, false, "Raid")
+createToggle(raidContent, "Auto Dungeon", 50, false, "Dungeon")
+
+local raidInfo = Instance.new("TextLabel")
+raidInfo.Size = UDim2.new(0.9, 0, 0, 80)
+raidInfo.Position = UDim2.new(0.05, 0, 0, 100)
+raidInfo.BackgroundTransparency = 0.5
+raidInfo.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+raidInfo.Text = "Auto Raid: teleports to portal,\nenters & kills enemies.\nAuto Dungeon: clears floors."
+raidInfo.TextColor3 = Color3.fromRGB(200, 200, 200)
+raidInfo.TextScaled = true
+raidInfo.Font = Enum.Font.GothamMedium
+raidInfo.Parent = raidContent
+
+-- =============================================
+--          TAB 3: TELEPORTS
+-- =============================================
+local teleContent = Instance.new("Frame")
+teleContent.Name = "TeleportsContent"
+teleContent.Size = UDim2.new(1, -10, 1, -95)
+teleContent.Position = UDim2.new(0, 5, 0, 90)
+teleContent.BackgroundTransparency = 1
+teleContent.Visible = false
+teleContent.Parent = mainFrame
+
+local locations = {
+    {"Jungle", Vector3.new(-1220, 80, 2850)},
+    {"Pirate Village", Vector3.new(-60, 10, 2850)},
+    {"Marine Fort", Vector3.new(2700, 15, 2800)},
+    {"Sky Islands", Vector3.new(3500, 700, 1200)},
+    {"Ice Castle", Vector3.new(4800, 350, -1100)},
+    {"Kingdom of Rose", Vector3.new(-50, 50, -50)},
+    {"Sea of Treats", Vector3.new(2700, 10, -1200)},
+    {"Raid Portal", Vector3.new(-100, 20, -50)},
+    {"Castle on Sea", Vector3.new(2800, 10, -1300)}
+}
+
+for i, loc in ipairs(locations) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 125, 0, 40)
+    local row = math.floor((i-1)/3)
+    local col = (i-1)%3
+    btn.Position = UDim2.new(0, 5 + col*135, 0, 5 + row*48)
+    btn.BackgroundColor3 = Color3.fromRGB(50, 40, 90)
+    btn.Text = loc[1]
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.TextScaled = true
+    btn.Font = Enum.Font.GothamBold
+    btn.Parent = teleContent
+    btn.MouseButton1Click:Connect(function()
+        pcall(function()
+            if rootPart then
+                rootPart.CFrame = CFrame.new(loc[2] + Vector3.new(0, 15, 0))
+            end
+        end)
+    end)
+end
+
+-- =============================================
+--          TAB 4: MISC (ESP / SNIPER)
+-- =============================================
+local miscContent = Instance.new("Frame")
+miscContent.Name = "MiscContent"
+miscContent.Size = UDim2.new(1, -10, 1, -95)
+miscContent.Position = UDim2.new(0, 5, 0, 90)
+miscContent.BackgroundTransparency = 1
+miscContent.Visible = false
+miscContent.Parent = mainFrame
+
+createToggle(miscContent, "Fruit Sniper", 5, false, "FruitSniper")
+createToggle(miscContent, "ESP (Fruits/Chests)", 50, false, "ESP")
+createToggle(miscContent, "Auto Stats (Melee)", 95, false, "AutoStats")
+
+local infoMisc = Instance.new("TextLabel")
+infoMisc.Size = UDim2.new(0.9, 0, 0, 60)
+infoMisc.Position = UDim2.new(0.05, 0, 0, 150)
+infoMisc.BackgroundTransparency = 0.5
+infoMisc.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+infoMisc.Text = "Fruit Sniper: auto-detects fruits\nESP: highlights fruits & chests"
+infoMisc.TextColor3 = Color3.fromRGB(200, 200, 200)
+infoMisc.TextScaled = true
+infoMisc.Font = Enum.Font.GothamMedium
+infoMisc.Parent = miscContent
+
+-- =============================================
+--          CORE LOGIC - ALL FEATURES
+-- =============================================
+
+-- 1. GET NEAREST ENEMY (Excludes Players)
+function getNearestEnemy(range)
+    range = range or 500
+    local closest, dist = nil, math.huge
+    for _, v in pairs(workspace:GetChildren()) do
+        if v:IsA("Model") and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
+            if v.Name ~= player.Name and not game:GetService("Players"):FindFirstChild(v.Name) then
+                local hrp = v:FindFirstChild("HumanoidRootPart")
+                if hrp and v.Humanoid.Health > 0 then
+                    local d = (rootPart.Position - hrp.Position).magnitude
+                    if d < dist and d < range then
+                        dist = d; closest = v
+                    end
+                end
+            end
+        end
+    end
+    return closest
+end
+
+-- 2. ATTACK FUNCTION
+function attackTarget(target)
+    if not target or not rootPart then return end
+    local hrp = target:FindFirstChild("HumanoidRootPart")
+    if hrp then
+        rootPart.CFrame = CFrame.new(hrp.Position + Vector3.new(0, 5, 2))
+        wait(0.1)
+        local tool = character:FindFirstChildOfClass("Tool")
+        if tool then tool:Activate() end
+        humanoid:StartAttack(0.5)
+    end
+end
+
+-- 3. AUTO FARM
+spawn(function()
+    while wait(0.15) do
+        if _G.Ritual.Farm and character and humanoid and rootPart then
+            pcall(function()
+                local enemy = getNearestEnemy(500)
+                if enemy then attackTarget(enemy) end
+            end)
+        end
+    end
 end)
 
--- FORCE VISIBLE ON SPAWN (Fixes "Nothing popped up")
--- This ensures the GUI appears even if you respawn
-player.CharacterAdded:Connect(function()
-	main.Visible = true
-	openBtn.Visible = false
+-- 4. AUTO QUEST (Level-Based NPC)
+function getQuestNPC()
+    local lvl = player:FindFirstChild("Data") and player.Data:FindFirstChild("Level") and player.Data.Level.Value or 0
+    local names = {"Pirate", "Monkey", "Soldier", "Bandit", "Mob Leader"}
+    for _, name in pairs(names) do
+        for _, v in pairs(workspace:GetChildren()) do
+            if v:IsA("Model") and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
+                if string.find(v.Name:lower(), name:lower()) then
+                    return v
+                end
+            end
+        end
+    end
+    return nil
+end
+
+spawn(function()
+    while wait(1) do
+        if _G.Ritual.Quest and character and rootPart then
+            pcall(function()
+                local npc = getQuestNPC()
+                if npc then
+                    local npcPos = npc:FindFirstChild("HumanoidRootPart").Position
+                    if (rootPart.Position - npcPos).magnitude > 20 then
+                        rootPart.CFrame = CFrame.new(npcPos + Vector3.new(0, 5, 3))
+                    end
+                    wait(0.5)
+                    -- Simulate interact (stand close)
+                    rootPart.CFrame = CFrame.new(npcPos + Vector3.new(0, 5, 0))
+                    wait(0.3)
+                end
+            end)
+        end
+    end
 end)
 
--- Also force visible immediately just in case
-main.Visible = true
-openBtn.Visible = false
+-- 5. AUTO COLLECT
+spawn(function()
+    while wait(0.5) do
+        if _G.Ritual.Collect and character and rootPart then
+            pcall(function()
+                for _, v in pairs(workspace:GetChildren()) do
+                    if v:IsA("Tool") or (v:IsA("Part") and (v.Name:find("Fruit") or v.Name:find("Money") or v.Name:find("Chest"))) then
+                        local pos = v:IsA("Tool") and v:FindFirstChild("Handle") and v.Handle.Position or (v:IsA("Part") and v.Position)
+                        if pos and (pos - rootPart.Position).magnitude < 120 then
+                            rootPart.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
+                            wait(0.2)
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- 6. AUTO SEA BEAST
+spawn(function()
+    while wait(2) do
+        if _G.Ritual.SeaBeast and character then
+            pcall(function()
+                for _, v in pairs(workspace:GetChildren()) do
+                    if v:IsA("Model") and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
+                        if v.Name:lower():find("sea") or v.Name:lower():find("beast") then
+                            if (rootPart.Position - v.HumanoidRootPart.Position).magnitude < 800 then
+                                attackTarget(v)
+                            else
+                                -- Teleport near sea beast
+                                rootPart.CFrame = CFrame.new(v.HumanoidRootPart.Position + Vector3.new(0, 20, 50))
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- 7. AUTO SHIP FARM
+spawn(function()
+    while wait(1) do
+        if _G.Ritual.ShipFarm and character then
+            pcall(function()
+                for _, v in pairs(workspace:GetChildren()) do
+                    if v:IsA("Model") and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
+                        if v.Name:lower():find("ship") or v.Name:lower():find("boat") then
+                            attackTarget(v)
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- 8. AUTO RAID (Simplified: teleports to raid island & kills enemies)
+spawn(function()
+    while wait(1) do
+        if _G.Ritual.Raid and character then
+            pcall(function()
+                local raidIsland = workspace:FindFirstChild("Raid") or workspace:FindFirstChild("RaidIsland")
+                if raidIsland then
+                    local target = getNearestEnemy(1000)
+                    if target then
+                        attackTarget(target)
+                    else
+                        -- Teleport to raid island center
+                        local center = raidIsland:FindFirstChild("HumanoidRootPart") or raidIsland:FindFirstChild("Part")
+                        if center then
+                            rootPart.CFrame = CFrame.new(center.Position + Vector3.new(0, 10, 0))
+                        end
+                    end
+                else
+                    -- Teleport to Raid Portal area to start
+                    rootPart.CFrame = CFrame.new(Vector3.new(-100, 20, -50) + Vector3.new(0, 5, 0))
+                end
+            end)
+        end
+    end
+end)
+
+-- 9. AUTO DUNGEON (Castle on Sea)
+spawn(function()
+    while wait(1) do
+        if _G.Ritual.Dungeon and character then
+            pcall(function()
+                local dungeon = workspace:FindFirstChild("Castle") or workspace:FindFirstChild("Dungeon")
+                if dungeon then
+                    local target = getNearestEnemy(1000)
+                    if target then
+                        attackTarget(target)
+                    else
+                        local part = dungeon:FindFirstChild("HumanoidRootPart") or dungeon:FindFirstChild("Part")
+                        if part then
+                            rootPart.CFrame = CFrame.new(part.Position + Vector3.new(0, 10, 5))
+                        end
+                    end
+                else
+                    -- Teleport to Castle on Sea
+                    rootPart.CFrame = CFrame.new(Vector3.new(2800, 10, -1300) + Vector3.new(0, 5, 0))
+                end
+            end)
+        end
+    end
+end)
+
+-- 10. FRUIT SNIPER
+spawn(function()
+    while wait(0.5) do
+        if _G.Ritual.FruitSniper and character and rootPart then
+            pcall(function()
+                for _, v in pairs(workspace:GetChildren()) do
+                    if v:IsA("Tool") and v:FindFirstChild("Handle") then
+                        if v.Name:lower():find("fruit") then
+                            local pos = v.Handle.Position
+                            if pos and (pos - rootPart.Position).magnitude < 500 then
+                                rootPart.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
+                                wait(0.2)
+                                -- Equip/Collect
+                                local hrp = character:FindFirstChild("HumanoidRootPart")
+                                if hrp then
+                                    hrp.CFrame = CFrame.new(pos + Vector3.new(0, 2, 0))
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- 11. ESP (Fruits & Chests)
+spawn(function()
+    while wait(1) do
+        if _G.Ritual.ESP then
+            pcall(function()
+                for _, v in pairs(workspace:GetChildren()) do
+                    if v:IsA("Tool") or v:IsA("Part") then
+                        local isFruit = v.Name:lower():find("fruit") or (v:IsA("Tool") and v:FindFirstChild("Handle"))
+                        local isChest = v.Name:lower():find("chest") or v.Name:lower():find("chest")
+                        if isFruit or isChest then
+                            local highlight = v:FindFirstChild("RitualESP")
+                            if not highlight then
+                                local h = Instance.new("Highlight")
+                                h.Name = "RitualESP"
+                                h.FillColor = isFruit and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(255, 255, 0)
+                                h.FillTransparency = 0.5
+                                h.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                h.Parent = v
+                            end
+                        end
+                    end
+                end
+            end)
+        else
+            -- Remove ESP
+            for _, v in pairs(workspace:GetDescendants()) do
+                if v.Name == "RitualESP" then v:Destroy() end
+            end
+        end
+    end
+end)
+
+-- 12. AUTO STATS (put points into Melee)
+spawn(function()
+    while wait(3) do
+        if _G.Ritual.AutoStats then
+            pcall(function()
+                local stats = player:FindFirstChild("Data") and player.Data:FindFirstChild("Stats")
+                if stats then
+                    local melee = stats:FindFirstChild("Melee")
+                    if melee and melee:IsA("IntValue") then
+                        local points = player:FindFirstChild("Data") and player.Data:FindFirstChild("StatPoints")
+                        if points and points.Value > 0 then
+                            for i = 1, points.Value do
+                                melee.Value = melee.Value + 1
+                                points.Value = points.Value - 1
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- 13. ANTI AFK
+spawn(function()
+    while wait(20) do
+        if _G.Ritual.AntiAFK then
+            pcall(function()
+                VirtualUser:CaptureController()
+                VirtualUser:ClickButton2(Vector2.new())
+                if rootPart then
+                    TweenService:Create(rootPart, TweenInfo.new(0.3), {CFrame = rootPart.CFrame * CFrame.new(0,0,0.3)}):Play()
+                end
+            end)
+        end
+    end
+end)
+
+-- =============================================
+--      MOBILE TOGGLE: TAP TITLE TO MINIMIZE
+-- =============================================
+title.MouseButton1Click:Connect(function()
+    minBtn.MouseButton1Click:Fire()
+end)
+
+-- Highlight default tab
+tabBtns["Farm"].BackgroundColor3 = Color3.fromRGB(80, 40, 180)
+
+print("⚔️ Ritual Hub loaded! All features ready for mobile.")
